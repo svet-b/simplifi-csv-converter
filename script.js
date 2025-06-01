@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         date: cleanValue(row[0]), // Booking Date (YYYY-MM-DD)
                         payee: cleanValue(row[2]), // Partner Name
                         amount: parseFloat(cleanValue(row[7])), // Amount (EUR)
+                        currency: 'EUR', // N26 transactions are always in EUR
                         reference: cleanValue(row[5]) // Payment Reference
                     };
 
@@ -79,9 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Clean up the values by removing quotes if present
                     const cleanValue = (val) => val?.replace(/^"(.*)"$/, '$1') || '';
 
-                    // Only process EUR transactions
+                    // Process both EUR and USD transactions
                     const currency = cleanValue(row[3]);
-                    if (currency !== 'EUR') continue;
+                    if (currency !== 'EUR' && currency !== 'USD') continue;
 
                     const payeeName = cleanValue(row[11]) || cleanValue(row[10]); // Payee Name or Payer Name
                     const description = cleanValue(row[4]); // Description
@@ -90,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         date: cleanValue(row[1]), // Date (DD-MM-YYYY)
                         payee: payeeName || description,
                         amount: parseFloat(cleanValue(row[2])), // Amount
+                        currency: currency, // Store the original currency
                         reference: description
                     };
 
@@ -128,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         date: row[0], // Date opération (DD/MM/YYYY)
                         payee: row[2], // Extract from libellé
                         amount: amount,
+                        currency: 'EUR', // Fortuneo transactions are always in EUR
                         reference: row[2] // Full libellé as reference
                     };
 
@@ -338,25 +341,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const previewTransactions = parsedTransactions.slice(0, 10);
             
             for (const transaction of previewTransactions) {
-                totalEUR += transaction.amount;
+                totalEUR += transaction.currency === 'EUR' ? transaction.amount : 0;
                 
-                // Get exchange rate for this transaction's date
-                const transactionDate = parseDateFromTransaction(transaction, bankType);
-                const exchangeRate = await getExchangeRate(transactionDate);
-                const amountUSD = transaction.amount * exchangeRate;
+                let amountUSD;
+                if (transaction.currency === 'USD') {
+                    // Already in USD, no conversion needed
+                    amountUSD = transaction.amount;
+                } else {
+                    // Convert EUR to USD
+                    const transactionDate = parseDateFromTransaction(transaction, bankType);
+                    const exchangeRate = await getExchangeRate(transactionDate);
+                    amountUSD = transaction.amount * exchangeRate;
+                }
                 totalUSD += amountUSD;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${convertDateToSimplifi(transaction.date, bankType)}</td>
                     <td>${escapeHtml(transaction.payee)}</td>
-                    <td>${transaction.amount.toFixed(2)} EUR</td>
+                    <td>${transaction.amount.toFixed(2)} ${transaction.currency}</td>
                     <td>${amountUSD.toFixed(2)} USD</td>
                 `;
                 previewBody.appendChild(row);
             }
 
-            totalAmountEUR.textContent = `${totalEUR.toFixed(2)} EUR`;
+            totalAmountEUR.textContent = totalEUR > 0 ? `${totalEUR.toFixed(2)} EUR` : '';
             totalAmountUSD.textContent = `${totalUSD.toFixed(2)} USD`;
             previewSection.classList.remove('hidden');
             convertButton.disabled = false;
@@ -395,8 +404,16 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const transaction of parsedTransactions) {
                 const simplifiDate = convertDateToSimplifi(transaction.date, bankSelector.value);
                 const transactionDate = parseDateFromTransaction(transaction, bankSelector.value);
-                const exchangeRate = await getExchangeRate(transactionDate);
-                const amountUSD = transaction.amount * exchangeRate;
+                
+                let amountUSD;
+                if (transaction.currency === 'USD') {
+                    // Already in USD, no conversion needed
+                    amountUSD = transaction.amount;
+                } else {
+                    // Convert EUR to USD
+                    const exchangeRate = await getExchangeRate(transactionDate);
+                    amountUSD = transaction.amount * exchangeRate;
+                }
                 
                 const row = [
                     `"${simplifiDate}"`,

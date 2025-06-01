@@ -26,7 +26,8 @@ A browser-based tool to convert bank statement CSV files from N26, Wise, and For
 ### Wise
 - **Input Format**: Wise transaction history CSV export
 - **Date Format**: DD-MM-YYYY  
-- **Amount**: EUR transactions only (other currencies are filtered out)
+- **Amount**: EUR and USD transactions supported (other currencies are filtered out)
+- **Currency Conversion**: EUR transactions are converted to USD; USD transactions are used as-is
 - **Payee**: Uses "Payee Name" or "Payer Name" columns
 
 ### Fortuneo
