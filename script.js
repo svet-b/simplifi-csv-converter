@@ -75,22 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!line) continue;
                     
                     const row = parseCSVRow(line);
-                    if (row.length < 20) continue;
+                    if (row.length < 21) continue;
 
                     // Clean up the values by removing quotes if present
                     const cleanValue = (val) => val?.replace(/^"(.*)"$/, '$1') || '';
 
                     // Process both EUR and USD transactions
-                    const currency = cleanValue(row[3]);
+                    const currency = cleanValue(row[4]);
                     if (currency !== 'EUR' && currency !== 'USD') continue;
 
-                    const payeeName = cleanValue(row[11]) || cleanValue(row[10]); // Payee Name or Payer Name
-                    const description = cleanValue(row[4]); // Description
+                    const payeeName = cleanValue(row[12]) || cleanValue(row[11]); // Payee Name or Payer Name
+                    const description = cleanValue(row[5]); // Description
                     
                     const transaction = {
                         date: cleanValue(row[1]), // Date (DD-MM-YYYY)
                         payee: payeeName || description,
-                        amount: parseFloat(cleanValue(row[2])), // Amount
+                        amount: parseFloat(cleanValue(row[3])), // Amount
                         currency: currency, // Store the original currency
                         reference: description
                     };
